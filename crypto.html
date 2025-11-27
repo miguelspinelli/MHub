@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cryptography Utils</title>
+<link rel="shortcut icon" href="cryptoutils.png" type="image/x-icon">
+
+<!-- CryptoJS (hashes + AES/DES/3DES) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+<style>
+  :root{
+    --blue:#1565d8;
+    --blue-dark:#0b3d91;
+    --bg:#f5f9ff;
+    --card:#fff;
+    --muted:#6b7280;
+    --accent:var(--blue);
+    --text:#0f172a;
+  }
+  .dark{
+    --bg:#04060a;
+    --card:#061224;
+    --muted:#94a3b8;
+    --accent:#4ea8ff;
+    --text:#e6eef8;
+    --blue: #4ea8ff;
+    --blue-dark: #2b6fb6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,Arial,sans-serif}
+  body{overflow-x:hidden} /* força sem rolagem horizontal */
+  header{background:linear-gradient(90deg,var(--blue),var(--blue-dark));color:white;padding:12px 18px;display:flex;align-items:center;gap:12px}
+  header h1{margin:0;font-size:18px}
+  .logo{width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;font-weight:700}
+  .app{display:grid;grid-template-columns:260px 1fr 320px;gap:14px;padding:18px}
+  .sidebar{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,0.06)}
+  .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 8px 30px rgba(2,6,23,0.06)}
+  .menu-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;color:var(--text)}
+  .menu-item:hover{background:rgba(0,0,0,0.04)}
+  .menu-item.active{background:linear-gradient(90deg,var(--blue),var(--blue-dark));color:white}
+  main{padding:0 6px;}
+  h2{margin:0 0 8px 0}
+  label{display:block;margin-top:8px;font-weight:600}
+  textarea,input,select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);background:transparent;color:inherit}
+  .row{display:flex;gap:10px;align-items:center}
+  .small{font-size:13px;color:var(--muted)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .btn{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid rgba(0,0,0,0.08);color:var(--text)}
+  .switch{display:inline-flex;align-items:center;gap:8px}
+  .toggle{position:relative;width:46px;height:26px;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.24s}
+  .knob{position:absolute;left:3px;top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:.24s}
+  .toggle.on{background:var(--accent)}
+  .toggle.on .knob{transform:translateX(20px)}
+  .muted{color:var(--muted);font-size:13px}
+  .progress-wrap{height:12px;background:rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;margin-top:10px}
+  .progress{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--blue-dark))}
+  .right-col{display:flex;flex-direction:column;gap:14px}
+  .info{font-size:13px;color:var(--muted)}
+  .footer{font-size:13px;color:var(--muted);padding:10px;text-align:center}
+  img.preview{max-width:100%;border-radius:8px;margin-top:8px;border:1px solid rgba(0,0,0,0.06)}
+  /* responsive */
+  @media(max-width:1100px){.app{grid-template-columns:1fr;}.right-col{order:2}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" title="Cryptography Utils"><img src="cryptoutils.png" alt="" style="height: 100%;"></div>
+  <h1>Cryptography Utils</h1>
+  <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+    <div class="switch small">
+      <div style="font-size:14px;color:white;opacity:0.9">Tema</div>
+      <div id="themeToggle" class="toggle" role="switch" aria-checked="false"><div class="knob"></div></div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div><strong>Menu</strong></div>
+      <div class="muted">v1.0</div>
+    </div>
+
+    <div id="menuText" class="menu-item active" onclick="showPanel('textPanel', this)"><span>📝 Texto</span></div>
+    <div id="menuFile" class="menu-item" onclick="showPanel('filePanel', this)"><span>📁 Arquivo</span></div>
+    <div id="menuImage" class="menu-item" onclick="showPanel('imagePanel', this)"><span>🖼️ Imagem</span></div>
+    <div id="menuSettings" class="menu-item" onclick="showPanel('settingsPanel', this)"><span>⚙️ Configurações</span></div>
+    <div id="menuAbout" class="menu-item" onclick="showPanel('aboutPanel', this)"><span>ℹ️ Sobre</span></div>
+
+    <div style="height:14px"></div>
+    <div class="card" style="padding:10px">
+      <div style="font-weight:700;margin-bottom:6px">Atalhos</div>
+      <div class="small">Ctrl+Enter — Processar (na aba de Texto)</div>
+      <div class="small">Ctrl+N — Nova aba (não aplicável na web)</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <!-- TEXT PANEL -->
+    <section id="textPanel" class="card">
+      <h2>Conversor — Texto</h2>
+
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label>Entrada</label>
+          <textarea id="textInput" rows="6" placeholder="Digite/cole o texto..."></textarea>
+
+          <label>Método</label>
+          <select id="textMethod" style="padding:10px;border-radius:8px">
+            <option value="" disabled selected hidden>Selecione um método...</option>
+            <!-- substitution / rot -->
+            <optgroup label="Substituição / ROT">
+              <option value="rot5">ROT5</option>
+              <option value="rot13">ROT13</option>
+              <option value="rot18">ROT18</option>
+              <option value="rot47">ROT47</option>
+              <option value="atbash">Atbash</option>
+            </optgroup>
+            <optgroup label="Codificações">
+              <option value="base32">Base32</option>
+              <option value="base64">Base64</option>
+              <option value="hex">Hexadecimal</option>
+              <option value="binary">Binário</option>
+              <option value="url">URL Encode/Decode</option>
+              <option value="morse">Morse</option>
+            </optgroup>
+            <optgroup label="Simétrica (senha)">
+              <option value="aes">AES</option>
+              <option value="des">DES</option>
+              <option value="3des">3DES</option>
+            </optgroup>
+            <optgroup label="Hashes (só codificar)">
+              <option value="md5">MD5</option>
+              <option value="sha1">SHA-1</option>
+              <option value="sha256">SHA-256</option>
+              <option value="sha512">SHA-512</option>
+            </optgroup>
+            <optgroup label="Extras">
+              <option value="leet">Leet Speak</option>
+              <option value="emoji">Emoji Code</option>
+            </optgroup>
+          </select>
+
+          <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="textEncode" checked>Codificar</label>
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="textDecode">Decodificar</label>
+            <input id="textPassword" type="text" placeholder="Senha (para AES/DES/3DES)" style="flex:1">
+            <button class="btn" onclick="processText()">Processar</button>
+          </div>
+
+        </div>
+
+        <div style="width:360px">
+          <label>Saída</label>
+          <textarea id="textOutput" rows="14" readonly placeholder="Resultado"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn ghost" onclick="copyText('textOutput')">Copiar</button>
+            <button class="btn" onclick="downloadFromTextarea('textOutput','result.txt')">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILE PANEL -->
+    <section id="filePanel" class="card" style="display:none">
+      <h2>Conversor — Arquivo</h2>
+      <label>Escolher arquivo</label>
+      <input id="fileInput" type="file">
+      <label>Método</label>
+      <select id="fileMethod">
+        <option value="" disabled selected hidden>Selecione um método...</option>
+        <optgroup label="Substituição / ROT">
+          <option value="rot5">ROT5</option>
+          <option value="rot13">ROT13</option>
+          <option value="rot18">ROT18</option>
+          <option value="rot47">ROT47</option>
+          <option value="atbash">Atbash</option>
+        </optgroup>
+        <optgroup label="Codificações">
+          <option value="base32">Base32</option>
+          <option value="base64">Base64</option>
+          <option value="hex">Hexadecimal</option>
+          <option value="binary">Binário</option>
+          <option value="url">URL Encode/Decode</option>
+          <option value="morse">Morse</option>
+        </optgroup>
+        <optgroup label="Simétrica (senha)">
+          <option value="aes">AES</option>
+          <option value="des">DES</option>
+          <option value="3des">3DES</option>
+        </optgroup>
+        <optgroup label="Hashes (só codificar)">
+          <option value="md5">MD5</option>
+          <option value="sha1">SHA-1</option>
+          <option value="sha256">SHA-256</option>
+          <option value="sha512">SHA-512</option>
+        </optgroup>
+        <optgroup label="Extras">
+          <option value="leet">Leet Speak</option>
+          <option value="emoji">Emoji Code</option>
+        </optgroup>
+      </select>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+        <label><input type="checkbox" id="fileEncode" checked>Codificar</label>
+        <label><input type="checkbox" id="fileDecode">Decodificar</label>
+        <input id="filePassword" type="text" placeholder="Senha (para AES/DES/3DES)" style="flex:1">
+        <button class="btn" onclick="processFile()">Processar</button>
+      </div>
+
+      <div class="muted small" style="margin-top:10px">Processamento de arquivo simula atraso aleatório entre <strong>15 e 30 segundos</strong>.</div>
+      <div class="progress-wrap" style="margin-top:10px"><div id="fileProgress" class="progress"></div></div>
+      <div id="fileStatus" class="small" style="margin-top:8px"></div>
+    </section>
+
+    <!-- IMAGE PANEL -->
+    <section id="imagePanel" class="card" style="display:none">
+      <h2>Conversor — Imagem</h2>
+      <label>Escolher imagem</label>
+      <input id="imageInput" type="file" accept="image/*">
+      <label>Método</label>
+      <select id="imageMethod">
+        <option value="" disabled selected hidden>Selecione um método...</option>
+        <option value="base64">Base64 (Data URL)</option>
+        <option value="hex">Hexadecimal</option>
+      </select>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+        <label><input type="checkbox" id="imageEncode" checked>Codificar</label>
+        <label><input type="checkbox" id="imageDecode">Decodificar</label>
+        <input id="imagePassword" type="text" placeholder="Senha (opcional para embutir/criptografar)" style="flex:1">
+        <button class="btn" onclick="processImage()">Processar</button>
+      </div>
+
+      <div class="muted small" style="margin-top:10px">Processamento de imagem simula atraso aleatório entre <strong>15 e 30 segundos</strong>.</div>
+      <div class="progress-wrap" style="margin-top:10px"><div id="imageProgress" class="progress"></div></div>
+      <div id="imageStatus" class="small" style="margin-top:8px"></div>
+      <div id="imagePreview"></div>
+    </section>
+
+    <!-- SETTINGS & ABOUT placeholders (prevent showPanel errors) -->
+    <section id="settingsPanel" class="card" style="display:none">
+      <h2>Configurações</h2>
+      <p>Este painel existe para corresponder ao menu 'Configurações' sem quebrar o código.</p>
+    </section>
+
+    <section id="aboutPanel" class="card" style="display:none">
+      <h2>Sobre</h2>
+      <p>Este painel existe para corresponder ao menu 'Sobre' sem quebrar o código.</p>
+    </section>
+
+  </main>
+
+  <!-- Right column -->
+  <aside class="right-col">
+    <div class="card">
+      <h3>Configurações rápidas</h3>
+      <label class="muted">Fonte</label>
+      <select id="fontSelect">
+        <option value="Inter, Arial, sans-serif">Padrão</option>
+        <option value="monospace">Monospace</option>
+        <option value="Georgia, serif">Serif</option>
+      </select>
+
+      <label class="muted" style="margin-top:8px">Atraso (min e max em segundos):</label>
+      <div class="row" style="margin-top:6px">
+        <input id="delayMin" type="number" min="5" max="120" value="15" style="width:100px">
+        <input id="delayMax" type="number" min="5" max="120" value="30" style="width:100px">
+      </div>
+
+      <label style="margin-top:10px"><input id="autoSave" type="checkbox" checked> Salvar automaticamente no Downloads</label>
+      <label><input id="simulateDelay" type="checkbox" checked> Simular atraso (arquivos/imagens)</label>
+
+      <div style="height:8px"></div>
+      <div class="info">
+        <div><strong>Notas</strong></div>
+        <div>- Hashes são irreversíveis (Decodificar desativado).</div>
+        <div>- AES/DES/3DES usam senha (campo fornecido ao lado de cada aba).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Sobre</h3>
+      <div class="info">Cryptography Utils — web edition. Ferramenta para codificação e criptografia de texto, arquivos e imagens. Desenvolvido para estudo e uso não-crítico.</div>
+    </div>
+
+    <div class="card footer">© Cryptography Utils</div>
+  </aside>
+</div>
+
+<script>
+/* ================== Helpers & state ================== */
+function showPanel(id, menuEl){
+  // remove active menu highlight
+  document.querySelectorAll('.menu-item').forEach(el=>el.classList.remove('active'));
+  if(menuEl) menuEl.classList.add('active');
+
+  // hide all main sections inside <main>
+  document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+
+  // find target section and show it if exists
+  const target = document.getElementById(id);
+  if(target){
+    target.style.display = 'block';
+    // optionally focus the first input inside
+    const first = target.querySelector('input, textarea, select, button');
+    if(first) first.focus();
+  } else {
+    // If the panel id doesn't exist, log and do nothing (prevents TypeError)
+    console.warn('showPanel: panel not found ->', id);
+  }
+}
+
+// theme toggle
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(dark){
+  if(dark) document.documentElement.classList.add('dark');
+  else document.documentElement.classList.remove('dark');
+  // update toggle visual
+  const t = document.getElementById('themeToggle');
+  if(t) t.classList.toggle('on', dark);
+  if(t) t.setAttribute('aria-checked', dark ? 'true' : 'false');
+}
+if(themeToggle){
+  themeToggle.addEventListener('click', ()=> {
+    const isOn = themeToggle.classList.toggle('on');
+    applyTheme(isOn);
+    localStorage.setItem('cu_theme_dark', isOn ? '1' : '0');
+  });
+}
+if(localStorage.getItem('cu_theme_dark') === '1'){ applyTheme(true); if(themeToggle) themeToggle.classList.add('on'); }
+
+/* Font */
+const fontSelect = document.getElementById('fontSelect');
+if(fontSelect){ fontSelect.addEventListener('change', e=>{ document.body.style.fontFamily = e.target.value; }); }
+
+/* Delay config */
+function getDelayMs(){
+  const minEl = document.getElementById('delayMin');
+  const maxEl = document.getElementById('delayMax');
+  const simulateEl = document.getElementById('simulateDelay');
+  const min = Math.max(1, parseInt((minEl && minEl.value) || 15));
+  const max = Math.max(min, parseInt((maxEl && maxEl.value) || 30));
+  const simulate = simulateEl ? simulateEl.checked : true;
+  if(!simulate) return 0;
+  return (min*1000) + Math.floor(Math.random() * ((max-min+1)*1000));
+}
+
+/* Small utilities */
+function copyText(id){ const el = document.getElementById(id); if(!el) return; const v = el.value; navigator.clipboard.writeText(v).then(()=> alert('Copiado!'), ()=> alert('Falha ao copiar')); }
+function downloadFromTextarea(id, filename){ const el = document.getElementById(id); if(!el) return; const text = el.value; const blob = new Blob([text], {type:'text/plain;charset=utf-8'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); }
+
+/* ================== Implementações dos algoritmos ================== */
+/* (same algorithms as before) - kept unchanged for brevity but present in the file */
+
+// ROT & helpers (keep as defined in prior version)
+function rot5(s){ return s.replace(/[0-9]/g, d => String.fromCharCode((d.charCodeAt(0)-48+5)%10 + 48)); }
+function rot13(s){ return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 65 : 97) + ((c.charCodeAt(0) - (c <= 'Z' ? 65 : 97) + 13) % 26))); }
+function rot18(s){ return s.split('').map(ch=> /[0-9]/.test(ch)? rot5(ch) : /[A-Za-z]/.test(ch)? rot13(ch): ch ).join(''); }
+function rot47(s){ return s.replace(/[!function rot47(s){ return s.replace(/[\x21-~function rot47(s){ return s.replace(/[\x21-\x7E]/g, c => String.fromCharCode(33 + ((c.charCodeAt(0)-33+47)%94))); }
+function atbash(s){ return s.replace(/[a-zA-Z]/g, c => { const base = c<='Z'?65:97; return String.fromCharCode(base + (25 - (c.charCodeAt(0)-base))); }); }
+
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function base32Encode(input){ const bytes = new TextEncoder().encode(input); let i=0,bits=0,value=0,output=''; while(i < bytes.length || bits > 0){ if(bits < 5){ if(i < bytes.length){ value = (value << 8) | bytes[i++]; bits += 8; } else { value <<= (5 - bits); bits = 5; } } bits -= 5; output += BASE32_ALPHABET[(value >>> bits) & 31]; } while(output.length % 8 !== 0) output += '='; return output; }
+function base32Decode(input){ input = input.replace(/=+$/,'').toUpperCase(); let bits=0,value=0,result=[]; for(let ch of input){ const idx = BASE32_ALPHABET.indexOf(ch); if(idx === -1) continue; value = (value << 5) | idx; bits += 5; if(bits >= 8){ bits -= 8; result.push((value >>> bits) & 255); } } return new TextDecoder().decode(new Uint8Array(result)); }
+
+function base64EncodeUnicode(str){ return btoa(new Uint8Array([...unescape(encodeURIComponent(str))].map(c=>c.charCodeAt(0))).reduce((s,b)=>s+String.fromCharCode(b),'')); }
+function base64DecodeUnicode(b64){ try{ return decodeURIComponent(escape(atob(b64))); } catch(e){ return null; } }
+function toHex(str){ return Array.from(new TextEncoder().encode(str)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function fromHex(hex){ try{ hex = hex.replace(/\s+/g,''); const bytes = new Uint8Array(hex.length/2); for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(hex.substr(i*2,2),16); return new TextDecoder().decode(bytes); } catch(e){ return null; } }
+function toBinary(str){ return Array.from(new TextEncoder().encode(str)).map(b=>b.toString(2).padStart(8,'0')).join(' '); }
+function fromBinary(bin){ try{ const parts = bin.trim().split(/\s+/); const u = new Uint8Array(parts.length); for(let i=0;i<parts.length;i++) u[i] = parseInt(parts[i],2); return new TextDecoder().decode(u); }catch(e){ return null; } }
+function urlEncode(s){ return encodeURIComponent(s); }
+function urlDecode(s){ try{ return decodeURIComponent(s); }catch(e){ return null; } }
+const MORSE = { A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',0:'-----',1:'.----',2:'..---',3:'...--',4:'....-',5:'.....',6:'-....',7:'--...',8:'---..',9:'----.', '':'/'};
+const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
+function morseEncode(s){ return s.toUpperCase().split('').map(ch=>MORSE[ch]||'?').join(' '); }
+function morseDecode(s){ return s.trim().split(/\s+/).map(tok=> tok === '/' ? ' ' : (MORSE_REV[tok]||'?')).join(''); }
+function leetSpeak(s){ const map = {A:'4',B:'8',C:'(',D:'|)',E:'3',F:'|=',G:'6',H:'#',I:'1',J:'_|',K:'|<',L:'1',M:'/\\/\\',N:'/\\/',O:'0',P:'|*',Q:'0,',R:'|2',S:'5',T:'7',U:'|_|',V:'\\/',W:'\\/\\/',X:'><',Y:'`/',Z:'2'}; return s.toUpperCase().split('').map(c=>map[c]||c).join(''); }
+const EMOJI_MAP = {a:'🍏',b:'🐝',c:'🌊',d:'🐬',e:'🥚',f:'🍟',g:'🦒',h:'🏠',i:'🍦',j:'🕹️',k:'🔪',l:'🦁',m:'🌝',n:'🎵',o:'⚽',p:'🥞',q:'❓',r:'🌈',s:'⭐',t:'🌴',u:'☂️',v:'🎻',w:'🔱',x:'❌',y:'🍸',z:'⚡'};
+function emojiEncode(s){ return s.toLowerCase().split('').map(c=>EMOJI_MAP[c]||c).join(''); }
+function emojiDecode(s){ const rev = Object.fromEntries(Object.entries(EMOJI_MAP).map(([k,v])=>[v,k])); let out = s; for(let [emoji,letter] of Object.entries(rev)) out = out.split(emoji).join(letter); return out; }
+
+function hashString(str, algo){ const wa = CryptoJS.enc.Utf8.parse(str); switch(algo){ case 'md5': return CryptoJS.MD5(wa).toString(CryptoJS.enc.Hex); case 'sha1': return CryptoJS.SHA1(wa).toString(CryptoJS.enc.Hex); case 'sha256': return CryptoJS.SHA256(wa).toString(CryptoJS.enc.Hex); case 'sha512': return CryptoJS.SHA512(wa).toString(CryptoJS.enc.Hex); } return null; }
+function encryptSymmetric(plain, algo, pass){ if(!pass) throw new Error('Senha requerida para criptografia simétrica'); switch(algo){ case 'aes': return CryptoJS.AES.encrypt(plain, pass).toString(); case 'des': return CryptoJS.DES.encrypt(plain, pass).toString(); case '3des': return CryptoJS.TripleDES.encrypt(plain, pass).toString(); } }
+function decryptSymmetric(cipher, algo, pass){ if(!pass) throw new Error('Senha requerida para descriptografia simétrica'); try{ switch(algo){ case 'aes': return CryptoJS.AES.decrypt(cipher, pass).toString(CryptoJS.enc.Utf8); case 'des': return CryptoJS.DES.decrypt(cipher, pass).toString(CryptoJS.enc.Utf8); case '3des': return CryptoJS.TripleDES.decrypt(cipher, pass).toString(CryptoJS.enc.Utf8); } }catch(e){ return null; } return null; }
+
+/* ================== Processamentos (Texto) ================== */
+function processText(){
+  const methodEl = document.getElementById('textMethod');
+  const method = methodEl ? methodEl.value : '';
+  if(!method){ alert('Por favor, selecione um método antes de converter!'); return; }
+  const encode = document.getElementById('textEncode').checked;
+  const decode = document.getElementById('textDecode').checked;
+  if(encode && decode){ alert('Marque apenas Codificar ou Decodificar'); return; }
+  const input = document.getElementById('textInput').value || '';
+  const pass = document.getElementById('textPassword').value || '';
+  let out = '';
+  try{
+    if(['md5','sha1','sha256','sha512'].includes(method)){
+      out = hashString(input, method);
+      const outEl = document.getElementById('textOutput'); if(outEl) outEl.value = out; return;
+    }
+    const action = encode ? 'encode' : (decode ? 'decode' : 'encode');
+    switch(method){
+      case 'rot5': out = (action==='encode')? rot5(input) : rot5(input); break;
+      case 'rot13': out = rot13(input); break;
+      case 'rot18': out = rot18(input); break;
+      case 'rot47': out = rot47(input); break;
+      case 'atbash': out = atbash(input); break;
+      case 'base32': out = (action==='encode')? base32Encode(input) : base32Decode(input); break;
+      case 'base64': out = (action==='encode')? base64EncodeUnicode(input) : (base64DecodeUnicode(input) || 'Erro'); break;
+      case 'hex': out = (action==='encode')? toHex(input) : (fromHex(input) || 'Erro'); break;
+      case 'binary': out = (action==='encode')? toBinary(input) : (fromBinary(input) || 'Erro'); break;
+      case 'url': out = (action==='encode')? urlEncode(input) : (urlDecode(input) || 'Erro'); break;
+      case 'morse': out = (action==='encode')? morseEncode(input) : morseDecode(input); break;
+      case 'aes': out = (action==='encode')? encryptSymmetric(input,'aes',pass) : (decryptSymmetric(input,'aes',pass)||'Erro'); break;
+      case 'des': out = (action==='encode')? encryptSymmetric(input,'des',pass) : (decryptSymmetric(input,'des',pass)||'Erro'); break;
+      case '3des': out = (action==='encode')? encryptSymmetric(input,'3des',pass) : (decryptSymmetric(input,'3des',pass)||'Erro'); break;
+      case 'leet': out = (action==='encode')? leetSpeak(input) : input; break;
+      case 'emoji': out = (action==='encode')? emojiEncode(input) : emojiDecode(input); break;
+      default: out = 'Método inválido';
+    }
+  }catch(e){ out = 'Erro: ' + e.message; }
+  const outEl = document.getElementById('textOutput'); if(outEl) outEl.value = out;
+}
+
+/* ================== Processamento de Arquivo ================== */
+async function processFile(){
+  const fEl = document.getElementById('fileInput');
+  const f = fEl && fEl.files ? fEl.files[0] : null;
+  if(!f){ alert('Selecione um arquivo'); return; }
+  const methodEl = document.getElementById('fileMethod');
+  const method = methodEl ? methodEl.value : '';
+  if(!method){ alert('Por favor, selecione um método antes de converter!'); return; }
+  const encode = document.getElementById('fileEncode').checked;
+  const decode = document.getElementById('fileDecode').checked;
+  if(encode && decode){ alert('Marque apenas Codificar ou Decodificar'); return; }
+  const pass = document.getElementById('filePassword').value || '';
+  const autoSave = document.getElementById('autoSave') ? document.getElementById('autoSave').checked : false;
+
+  const progressEl = document.getElementById('fileProgress');
+  const statusEl = document.getElementById('fileStatus');
+  if(progressEl) progressEl.style.width = '0%'; if(statusEl) statusEl.textContent = 'Preparando...';
+
+  const delay = getDelayMs();
+  if(delay > 0){ if(statusEl) statusEl.textContent = 'Convertendo arquivo... Isso pode levar alguns segundos.'; await simulateProgress(progressEl, delay); }
+
+  const arrBuf = await f.arrayBuffer();
+  const uint8 = new Uint8Array(arrBuf);
+  let textRepresentation = null; try{ textRepresentation = new TextDecoder().decode(uint8); } catch(e){ textRepresentation = null; }
+
+  try{
+    if(['md5','sha1','sha256','sha512'].includes(method)){
+      const hex = CryptoJS.enc.Hex.stringify(CryptoJS.lib.WordArray.create(uint8));
+      let result = '';
+      switch(method){ case 'md5': result = CryptoJS.MD5(CryptoJS.enc.Hex.parse(hex)).toString(); break; case 'sha1': result = CryptoJS.SHA1(CryptoJS.enc.Hex.parse(hex)).toString(); break; case 'sha256': result = CryptoJS.SHA256(CryptoJS.enc.Hex.parse(hex)).toString(); break; case 'sha512': result = CryptoJS.SHA512(CryptoJS.enc.Hex.parse(hex)).toString(); break; }
+      if(statusEl) statusEl.textContent = 'Hash gerada'; if(progressEl) progressEl.style.width = '100%';
+      if(autoSave) downloadBlob(new Blob([result],{type:'text/plain'}), method+'_'+f.name+'.txt');
+      return;
+    }
+
+    let outputText = ''; let outputBytes = null;
+    const action = encode ? 'encode' : (decode ? 'decode' : 'encode');
+
+    if(['base64','base32','hex','binary','url','morse','rot5','rot13','rot18','rot47','atbash','leet','emoji'].includes(method)){
+      if(action==='decode'){
+        if(!textRepresentation){ throw new Error('Arquivo não contém texto legível para decodificar com esse método.'); }
+        switch(method){
+          case 'base64': outputBytes = Uint8Array.from(atob(textRepresentation.replace(/\s+/g,'')), c=>c.charCodeAt(0)); break;
+          case 'base32': outputText = base32Decode(textRepresentation); break;
+          case 'hex': outputText = fromHex(textRepresentation); break;
+          case 'binary': outputText = fromBinary(textRepresentation); break;
+          case 'url': outputText = urlDecode(textRepresentation); break;
+          case 'morse': outputText = morseDecode(textRepresentation); break;
+          case 'rot5': outputText = rot5(textRepresentation); break;
+          case 'rot13': outputText = rot13(textRepresentation); break;
+          case 'rot18': outputText = rot18(textRepresentation); break;
+          case 'rot47': outputText = rot47(textRepresentation); break;
+          case 'atbash': outputText = atbash(textRepresentation); break;
+          case 'leet': outputText = textRepresentation; break;
+          case 'emoji': outputText = emojiDecode(textRepresentation); break;
+        }
+      } else {
+        switch(method){
+          case 'base64': outputText = arrayBufferToBase64(arrBuf); break;
+          case 'base32': outputText = base32Encode(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'hex': outputText = bytesToHex(uint8); break;
+          case 'binary': outputText = Array.from(uint8).map(b=>b.toString(2).padStart(8,'0')).join(' '); break;
+          case 'url': outputText = encodeURIComponent(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'morse': outputText = morseEncode(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'rot5': outputText = rot5(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'rot13': outputText = rot13(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'rot18': outputText = rot18(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'rot47': outputText = rot47(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'atbash': outputText = atbash(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'leet': outputText = leetSpeak(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+          case 'emoji': outputText = emojiEncode(textRepresentation !== null ? textRepresentation : binaryToText(uint8)); break;
+        }
+      }
+    } else if(['aes','des','3des'].includes(method)){
+      if(action==='encode'){
+        const txt = textRepresentation !== null ? textRepresentation : binaryToText(uint8);
+        outputText = encryptSymmetric(txt, method==='aes'?'aes':(method==='des'?'des':'3des'), passRequired(document.getElementById('filePassword').value));
+      } else {
+        const txt = textRepresentation !== null ? textRepresentation : binaryToText(uint8);
+        outputText = decryptSymmetric(txt, method==='aes'?'aes':(method==='des'?'des':'3des'), passRequired(document.getElementById('filePassword').value));
+      }
+    } else { throw new Error('Método não suportado para arquivo.'); }
+
+    if(outputBytes){ if(statusEl) statusEl.textContent = 'Arquivo convertido (binário).'; if(progressEl) progressEl.style.width = '100%'; if(document.getElementById('autoSave') && document.getElementById('autoSave').checked) downloadBlob(new Blob([outputBytes],{type:'application/octet-stream'}), (encode?'encoded_':'decoded_') + f.name); }
+    else { if(statusEl) statusEl.textContent = 'Arquivo convertido (texto).'; if(progressEl) progressEl.style.width = '100%'; if(document.getElementById('autoSave') && document.getElementById('autoSave').checked) downloadBlob(new Blob([outputText],{type:'text/plain;charset=utf-8'}),(encode?'encoded_':'decoded_') + f.name + '.txt'); }
+
+  }catch(err){ if(document.getElementById('fileStatus')) document.getElementById('fileStatus').textContent = 'Erro: ' + err.message; if(document.getElementById('fileProgress')) document.getElementById('fileProgress').style.width = '0%'; }
+}
+
+/* ================== Processamento de Imagem ================== */
+async function processImage(){
+  const fEl = document.getElementById('imageInput');
+  const f = fEl && fEl.files ? fEl.files[0] : null;
+  if(!f){ alert('Selecione uma imagem'); return; }
+  const methodEl = document.getElementById('imageMethod');
+  const method = methodEl ? methodEl.value : '';
+  if(!method){ alert('Por favor, selecione um método antes de converter!'); return; }
+  const encode = document.getElementById('imageEncode').checked;
+  const decode = document.getElementById('imageDecode').checked;
+  if(encode && decode){ alert('Marque apenas Codificar ou Decodificar'); return; }
+  const pass = document.getElementById('imagePassword').value || '';
+  const autoSave = document.getElementById('autoSave') ? document.getElementById('autoSave').checked : false;
+  const progressEl = document.getElementById('imageProgress');
+  const statusEl = document.getElementById('imageStatus');
+  if(progressEl) progressEl.style.width = '0%'; if(statusEl) statusEl.textContent = 'Preparando...';
+
+  const delay = getDelayMs(); if(delay > 0){ if(statusEl) statusEl.textContent = 'Processando imagem...'; await simulateProgress(progressEl, delay); }
+
+  const dataUrl = await readFileAsDataURL(f);
+  try{
+    if(encode){ if(method === 'base64'){ const outEl = document.getElementById('imageResult'); if(outEl) outEl.value = dataUrl; if(autoSave) downloadBlob(dataURLtoBlob(dataUrl),'encoded_' + f.name); }
+      else if(method === 'hex'){ const arr = await f.arrayBuffer(); const u8 = new Uint8Array(arr); const hex = bytesToHex(u8); const outEl = document.getElementById('imageResult'); if(outEl) outEl.value = hex; if(autoSave) downloadBlob(new Blob([hex],{type:'text/plain'}),'encoded_' + f.name + '.hex'); }
+      if(document.getElementById('imageStatus')) document.getElementById('imageStatus').textContent = 'Imagem codificada'; if(document.getElementById('imagePreview')) document.getElementById('imagePreview').innerHTML = '<img src="'+dataUrl+'" class="preview">'; if(progressEl) progressEl.style.width = '100%';
+    } else {
+      const asText = await f.text();
+      if(method === 'base64'){
+        let b64 = asText.trim();
+        if(b64.startsWith('data:')) { if(document.getElementById('imagePreview')) document.getElementById('imagePreview').innerHTML = '<img src="'+b64+'" class="preview">'; if(autoSave) downloadBlob(dataURLtoBlob(b64),'decoded_'+f.name); }
+        else { const guess = 'data:image/*;base64,'+b64; if(document.getElementById('imagePreview')) document.getElementById('imagePreview').innerHTML = '<img src="'+guess+'" class="preview">'; if(autoSave) downloadBlob(dataURLtoBlob(guess),'decoded_'+f.name); }
+      } else if(method === 'hex'){
+        const bytes = hexToBytes(asText.trim()); const blob = new Blob([bytes], {type: 'image/*'}); const url = URL.createObjectURL(blob); if(document.getElementById('imagePreview')) document.getElementById('imagePreview').innerHTML = '<img src="'+url+'" class="preview">'; if(autoSave) downloadBlob(blob, 'decoded_'+f.name);
+      }
+      if(progressEl) progressEl.style.width = '100%'; if(document.getElementById('imageStatus')) document.getElementById('imageStatus').textContent = 'Imagem decodificada';
+    }
+  } catch(err){ if(document.getElementById('imageStatus')) document.getElementById('imageStatus').textContent = 'Erro: ' + err.message; if(progressEl) progressEl.style.width = '0%'; }
+}
+
+/* ================== Utilities for file/image ================== */
+function readFileAsDataURL(file){ return new Promise((res, rej) => { const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(file); }) }
+function arrayBufferToBase64(buffer){ let binary = ''; const bytes = new Uint8Array(buffer); const chunk = 0x8000; for(let i=0;i<bytes.length;i+=chunk){ const sub = bytes.subarray(i, i+chunk); binary += String.fromCharCode.apply(null, sub); } return btoa(binary); }
+function dataURLtoBlob(dataurl){ const parts = dataurl.split(','); const mime = parts[0].match(/:(.*?);/)[1]; const bstr = atob(parts[1]); let n = bstr.length; const u8 = new Uint8Array(n); while(n--) u8[n] = bstr.charCodeAt(n); return new Blob([u8], {type:mime}); }
+function downloadBlob(blob, filename){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href); }
+function binaryToText(u8){ try{ return new TextDecoder().decode(u8); } catch(e){ return ''; } }
+function bytesToHex(u8){ return Array.from(u8).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function hexToBytes(hex){ hex = hex.replace(/\s+/g,''); if(hex.length%2!==0) throw new Error('Hex inválido'); const out = new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i] = parseInt(hex.substr(i*2,2),16); return out; }
+
+/* Progress simulator */
+function simulateProgress(el, totalMs){
+  return new Promise(res=>{
+    if(!el || !el.style){ // if progress element missing, just wait the total time then resolve
+      setTimeout(res, totalMs || 0);
+      return;
+    }
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(100, Math.floor((elapsed/totalMs)*100));
+      el.style.width = pct + '%';
+      if(elapsed >= totalMs){ el.style.width = '100%'; res(); }
+      else setTimeout(tick, 200 + Math.random()*400);
+    };
+    tick();
+  });
+}
+
+/* Passphrase helper */
+function passRequired(v){ if(!v) throw new Error('Senha necessária para operação'); return v; }
+
+/* ================== Event bindings ================== */
+function setupMutualExclusive(encodeId, decodeId){ const e = document.getElementById(encodeId), d = document.getElementById(decodeId); if(!e || !d) return; e.addEventListener('change', () => { if(e.checked && d.checked) d.checked = false; }); d.addEventListener('change', () => { if(e.checked && d.checked) e.checked = false; }); }
+setupMutualExclusive('textEncode','textDecode');
+setupMutualExclusive('fileEncode','fileDecode');
+setupMutualExclusive('imageEncode','imageDecode');
+
+// Keyboard shortcut: Ctrl+Enter process text
+document.addEventListener('keydown', e => { if(e.ctrlKey && e.key === 'Enter'){ processText(); } });
+
+// On load, default panels/view
+document.addEventListener('DOMContentLoaded', ()=>{ showPanel('textPanel', document.getElementById('menuText')); });
+
+</script>
+</body>
+</html>

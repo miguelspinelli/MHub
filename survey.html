@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="startsurveyweb.png" type="image/x-icon">
     <style>
         body {
             font-family: 'Roboto Mono', monospace;
@@ -510,9 +511,9 @@
             const location = timezone.replace(/_/g, ' ').split('/')[1];
 
             locationInfo.innerHTML = `
-            <p>Data: ${date}</p>
-            <p>Horário: ${time}</p>
-            <p>Localização: ${location}</p>
+            <p>Data da Finalização do questionário: ${date}</p>
+            <p>Horário da Finalização do questionário: ${time}</p>
+            <p>Localização Aproximada: ${location}</p>
             `;
         }
     </script>
